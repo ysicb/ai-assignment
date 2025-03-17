@@ -1,0 +1,11 @@
+mysql-connector-python
+fastapi
+uvicorn
+pydantic
+pandas
+transformers
+beautifulsoup4
+openai
+python-dotenv
+
+

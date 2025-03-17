@@ -1,0 +1,7 @@
+venv
+grouped_conversations.csv
+grouped_conversations.pkl
+classified_conversations.pkl
+*.csv
+*.pkl
+.env
