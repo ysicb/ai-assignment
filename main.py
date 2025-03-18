@@ -73,7 +73,7 @@ def classify_conversation_with_openai(conversation_text):
     client = openai.OpenAI(api_key=OPENAI_API_KEY)  # Create OpenAI client
 
     prompt = f"""
-    Given the following chatbot conversation, classify it as either 'successful' or 'unsuccessful'.
+    Given the following chatbot conversation, classify it as either 'successful' or 'unsuccessful' based on satisfactorily answering the user's queries.
     
     Conversation:
     {conversation_text}
