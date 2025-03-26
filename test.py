@@ -1,27 +1,49 @@
 
+# import pandas as pd
+
+# # Load the DataFrame from the pickle file
+# df = pd.read_pickle("classified_conversations.pkl")
+
+# # Display basic info about the DataFrame
+# print(df.info())  # Shows column names, data types, and non-null counts
+
+# # Display the first 100 conversations
+# for conversation_id in range(100):
+#     conversation_rows = df[df["ConversationId"] == conversation_id]
+    
+#     if not conversation_rows.empty:  # Check if conversation exists
+#         print(f"\nConversation ID: {conversation_id}\n")
+
+#         for _, row in conversation_rows.iterrows():
+#             conversation = row["Conversation"]  # Extract the structured conversation
+#             predicted_label = row["Predicted_Label"]  # Get classification result
+
+#             for sender, message, timestamp in conversation:
+#                 print(f"{timestamp} - {sender}: {message}")
+
+#             print(f"\nPredicted Label: {predicted_label}\n" + "-"*50)
+
 import pandas as pd
 
-# Load the DataFrame from the pickle file
-df = pd.read_pickle("classified_conversations.pkl")
+# Load the CSV file into a DataFrame
+df = pd.read_csv("filtered_conversations.csv")
 
-# Display basic info about the DataFrame
-print(df.info())  # Shows column names, data types, and non-null counts
-
-# Display the first 100 conversations
-for conversation_id in range(100):
+# Print conversations in a structured format
+for conversation_id in df["ConversationId"].unique()[40651:40700]:  # First 100 conversations
     conversation_rows = df[df["ConversationId"] == conversation_id]
     
-    if not conversation_rows.empty:  # Check if conversation exists
-        print(f"\nConversation ID: {conversation_id}\n")
+    print(f"\nConversation ID: {conversation_id}\n")
+    
+    for _, row in conversation_rows.iterrows():
+        print(f"{row['Timestamp']} - {row['Sender']}: {row['Message']}")
+    
+    print("-" * 80)  # Separator for clarity
 
-        for _, row in conversation_rows.iterrows():
-            conversation = row["Conversation"]  # Extract the structured conversation
-            predicted_label = row["Predicted_Label"]  # Get classification result
 
-            for sender, message, timestamp in conversation:
-                print(f"{timestamp} - {sender}: {message}")
 
-            print(f"\nPredicted Label: {predicted_label}\n" + "-"*50)
+
+
+
 
 
 # # temporary
