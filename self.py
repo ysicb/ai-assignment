@@ -9,8 +9,6 @@ from bs4 import BeautifulSoup
 from dotenv import load_dotenv
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 
-
-
 # Load environment variables
 load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
@@ -45,8 +43,42 @@ def clean_text(text):
     text = re.sub(r'\s+', ' ', text).strip()
     return text
 
-# Load test data (conversation IDs and actual labels)
-labels_df = pd.read_csv("test_set.csv")
+# Generate dynamic prompt based on test data
+def generate_prompt_from_test_data(labels_df):
+    success_examples = []
+    failure_examples = []
+    
+    for _, row in labels_df.iterrows():
+        conv_id = row["conversationid"]
+        label = row["label"]
+        
+        conversation = fetch_conversations([conv_id]).get(conv_id, "")
+        if label == 1:
+            success_examples.append(f"Conversation ID: {conv_id}\n{conversation}\nClassification: successful\n")
+        else:
+            failure_examples.append(f"Conversation ID: {conv_id}\n{conversation}\nClassification: unsuccessful\n")
+    
+    success_text = "\n\n".join(success_examples[:5])  # Limit to 5 examples
+    failure_text = "\n\n".join(failure_examples[:5])
+    
+    return f"""
+    You are an AI assistant trained to evaluate chatbot conversations. Your task is to classify a conversation as either 'successful' or 'unsuccessful' based on the bot’s responses.
+    
+    **Success Examples:**
+    {success_text}
+    
+    **Failure Examples:**
+    {failure_text}
+    
+    Classify the given conversations and return a JSON response in this format:
+    {{
+        "conversation_id": {{
+            "classification": "successful" or "unsuccessful",
+            "confidence_score": float (between 0 and 1),
+            "reason": "Brief explanation for classification"
+        }}
+    }}
+    """
 
 # Fetch conversation texts
 def fetch_conversations(conversation_ids):
@@ -70,35 +102,9 @@ def fetch_conversations(conversation_ids):
     return conversations
 
 # Batch classify conversations using OpenAI
-def classify_conversations(conversations):
+def classify_conversations(conversations, prompt):
     client = openai.OpenAI(api_key=OPENAI_API_KEY)
-    prompt =  """
-    You are an AI assistant trained to evaluate chatbot conversations. Your task is to classify a conversation as either 'successful' or 'unsuccessful' based on the quality of the bot’s responses. The primary focus is on bot's responses than user behaviour. User behavior (such as exiting the chat early or not responding) does not determine failure focus on what the bot replies.
-
-    **Success Criteria:**
-    - The bot provides a relevant and satisfactory response to the user's query.
-    - The conversation reaches a resolution where the user's needs are met, and if request not fulfilled due to external reasons (not because of bot's misunderstanding) and bot communicates this, then it is successful(eg: while scheduling a tour if a slot is unavailable then the bot specifies as unavailable hence successful). 
-    - If the bot does not have an exact answer, it provides a useful alternative(eg: if bot cannot provide a exact location, it will give link of the map).
-
-    **Failure Indicators:**
-    - The bot provides fallback phrases(eg i am virtual assistant i don't understand, can you rephrase, I'm sorry, I'm having trouble hearing you, etc), irrelevant ,incomplete or unhelpful response.
-    - The user expresses dissatisfaction or repeats/reframes the question.
-    - If the user asks to talk to a human or leasing agent or bot suggests to talk to a leasing agent.
     
-    Conversations:
-
-    Response format: JSON
-    {
-        "conversation_id": {
-            "classification": "successful" or "unsuccessful",
-            "confidence_score": float (between 0 and 1),
-            "reason": "Brief explanation for classification"
-    },
-        ...
-    }
-    """
-    
-
     for conv_id, text in conversations.items():
         prompt += f"\nConversation ID: {conv_id}\n{text}\n"
     
@@ -106,28 +112,25 @@ def classify_conversations(conversations):
         model="gpt-4o",
         temperature=0.0,
         messages=[
-            {"role": "system", "content": "You classify chatbot conversations. that I am providing " },
+            {"role": "system", "content": "You classify chatbot conversations."},
             {"role": "user", "content": prompt}
         ],
         response_format={"type": "json_object"}
     )
     
     result_json = response.choices[0].message.content
-    
     return json.loads(result_json)
 
-
 # Main execution
+labels_df = pd.read_csv("test_set.csv")
 conversation_ids = labels_df["conversationid"].tolist()
 conversations = fetch_conversations(conversation_ids)
-predictions = classify_conversations(conversations)
+prompt = generate_prompt_from_test_data(labels_df)
+predictions = classify_conversations(conversations, prompt)
 
 # Store predicted labels in DataFrame
 labels_df["predicted_label"] = labels_df["conversationid"].map(lambda conv_id: 1 if predictions.get(str(conv_id), {}).get("classification") == "successful" else 0)
-labels_df["conversation_text"] = labels_df["conversationid"].map(lambda conv_id: clean_text(conversations.get(conv_id, "")))
-labels_df["reason"] = labels_df["conversationid"].map(lambda conv_id: predictions.get(str(conv_id), {}).get("reason", "No reason provided"))
 
-labels_df.to_csv("labels.csv")
 # Compute evaluation metrics
 y_true = labels_df["label"]
 y_pred = labels_df["predicted_label"]
@@ -137,13 +140,9 @@ precision = precision_score(y_true, y_pred)
 recall = recall_score(y_true, y_pred)
 f1 = f1_score(y_true, y_pred)
 
-# Print actual vs predicted labels
-#print(labels_df[["conversationid", "label", "predicted_label"]].tail(60))
-
-#Print evaluation results
+# Print evaluation results
 print("\nModel Evaluation Metrics:")
 print(f"Accuracy: {accuracy:.2f}")
 print(f"Precision: {precision:.2f}")
 print(f"Recall: {recall:.2f}")
 print(f"F1-score: {f1:.2f}")
-

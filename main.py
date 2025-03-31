@@ -68,7 +68,7 @@ def classify_conversation_with_openai(conversation_text):
     - If the bot does not have an exact answer, it provides a useful alternative(eg: if bot cannot provide a exact location, it will give link of the map).
 
     **Failure Indicators:**
-    - The bot provides fallback phrases(eg i am virtual assistant i don't understand, can you rephrase, etc), irrelevant ,incomplete or unhelpful response.
+    - The bot provides fallback phrases(eg i am virtual assistant i don't understand, can you rephrase,I'm sorry, I'm having trouble hearing you, etc), irrelevant ,incomplete or unhelpful response.
     - The user expresses dissatisfaction or repeats/reframes the question.
     - If the user asks to talk to a human or leasing agent or bot suggests to talk to a leasing agent.
     
